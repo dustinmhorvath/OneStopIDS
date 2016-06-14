@@ -1,5 +1,4 @@
-MYSQLROOTPASSWD=passw0rd
-SNORBYDBPASS=passw0rd
+#!/bin/bash
 
 set -e
 
@@ -8,6 +7,12 @@ if [[ $EUID -ne 0 ]]; then
 	echo "This script requires elevated privileges to run. Are you root?"
 	exit
 fi
+
+echo 'Create MySQL root password:'
+read -s MYSQLROOTPASSWD
+echo 'Create snorbyuser database password:'
+read -s SNORBYDBPASS
+
 
 DATE=$(date +"%Y%m%d%H%M")
 
