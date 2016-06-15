@@ -29,6 +29,7 @@ echo ""
 
 echo "Installing Suricata..."
 apt-get install suricata -y > /dev/null
+cp /etc/suricata/suricata-debian.yaml /etc/suricata/suricata.yaml
 echo "Done."
 echo ""
 
@@ -77,11 +78,38 @@ echo ""
 
 echo "Configuring MySQL listen..."
 sed -i 's/bind-address\s\+.*/bind-address = 0.0.0.0/g' /etc/mysql/my.cnf
-
 service mysql restart
-echo "Installing Apache2..."
+
+
+echo "Installing Apache2 (1/5) apt-getting..."
 apt-get install apache2 apache2-dev libapr1-dev libaprutil1-dev libcurl4-openssl-dev -y > /dev/null
 service apache2 start
+echo "Installing Apache2 (2/5) fixing permissions..."
+chown www-data:www-data /var/www/snorby -R
+
+echo "Installing Apache2 (3/5) writing new apache config..."
+cat <<EOT >> /etc/apache2/sites-available/snorby.conf
+<VirtualHost *:80>
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/snorby/public
+
+        <Directory "/var/www/snorby/public">
+                AllowOverride all
+                Order deny,allow
+                Allow from all
+                Options -MultiViews
+        </Directory>
+
+</VirtualHost>
+EOT
+echo "Installing Apache2 (4/5) enabling site..."
+a2dissite 000-default.conf
+a2ensite snorby.conf
+echo "Installing Apache2 (5/5) starting Apache..."
+service apache2 restart
+echo "Done"
+echo ""
+
 
 echo "Passenger (1/3) installing Passenger gem..."
 gem install --no-ri --no-rdoc passenger > /dev/null
@@ -96,41 +124,17 @@ rm /tmp/.passenger_compile_out
 echo "Done."
 echo ""
 
-chown www-data:www-data /var/www/snorby -R
-
-echo "Writing new apache config..."
-cat <<EOT >> /etc/apache2/sites-available/snorby.conf
-
-<VirtualHost *:80>
-        ServerAdmin webmaster@localhost
-        DocumentRoot /var/www/snorby/public
-
-        <Directory "/var/www/snorby/public">
-                AllowOverride all
-                Order deny,allow
-                Allow from all
-                Options -MultiViews
-        </Directory>
-
-</VirtualHost>
-
-EOT
-
-a2dissite 000-default.conf
-a2ensite snorby.conf
-
-service apache2 restart
 
 cd /var/www/snorby
 echo "Bundle packing snorby..."
 bundle pack > /dev/null
 echo "Installing snorby..."
 bundle install --path vender/cache > /dev/null
-echo "Done.\n"
+echo "Done."
 
 echo "Installing Barnyard2 dependencies..."
 apt-get install libpcre3 libpcre3-dbg libpcre3-dev build-essential autoconf automake libtool libpcap-dev libnet1-dev libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 make libmagic-dev git pkg-config libnss3-dev libnspr4-dev wget mysql-client libmysqlclient-dev libmysqlclient18 libdumbnet-dev -y > /dev/null
-echo "Got Barnyard2 dependencies.\n"
+echo "Got Barnyard2 dependencies."
 
 cd /tmp
 echo "Getting OISF source..."
@@ -178,7 +182,7 @@ cd barnyard2
 echo "Setting up..."
 ./autogen.sh > /dev/null
 echo "Configuring Barnyard2..."
-autoreconf --force --install
+autoreconf --force --install > /dev/null
 ./configure > /dev/null #NOTE: --with-mysql here? > /dev/null
 if [ -f /usr/include/dnet.h ];
 then
@@ -211,16 +215,17 @@ fi
 sed -i "s#RUN=.*#RUN=yes#g" /etc/default/suricata
 sed -i "s#LISTENMODE=.*#LISTENMODE=af-packet#g" /etc/default/suricata
 sed -i "s#SURCONF=.*#SURCONF=/etc/suricata/suricata.yaml#g" /etc/default/suricata
-cp suricata-debian.yaml suricata.yaml
 
 #NOTE doesn't seem to run, but w/e, will deal with later
-sed -i "s|windows: [0.0.0.0/0].*|#windows: [0.0.0.0/0]|g" /etc/suricata/suricata.yaml 
+sed -i "s|windows: [0.0.0.0/0].*|#windows: [0.0.0.0/0]|g" /etc/suricata/suricata.yaml
 
-wget http://rules.emergingthreats.net/open/suricata/emerging.rules.tar.gz
-tar xzf emerging.rules.tar.gz /etc/suricata/rules/
+cd /etc/suricata/
+wget http://rules.emergingthreats.net/open/suricata/emerging.rules.tar.gz > /dev/null
+tar xzf emerging.rules.tar.gz
 rm emerging.rules.tar.gz
 
-suricata -c /etc/suricata/suricata.yaml -i eth0 -D
+service suricata stop
+suricata -c /etc/suricata/suricata.yaml -i eth0 -D > /dev/null || echo "Error starting Suricata, probably already running. Continuing."
 barnyard2 -c /etc/suricata/barnyard2.conf -d /var/log/suricata -f unified2.alert -w /var/log/suricata/suricata.waldo -D
 
 echo "Writing barnyard init.d..."
