@@ -128,7 +128,7 @@ bundle install --path vender/cache > /dev/null
 echo "Done.\n"
 
 echo "Installing Barnyard2 dependencies..."
-apt-get install libpcre3 libpcre3-dbg libpcre3-dev build-essential autoconf automake libtool libpcap-dev libnet1-dev libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 make libmagic-dev git pkg-config libnss3-dev libnspr4-dev wget mysql-client libmysqlclient-dev libmysqlclient18 -y > /dev/null
+apt-get install libpcre3 libpcre3-dbg libpcre3-dev build-essential autoconf automake libtool libpcap-dev libnet1-dev libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 make libmagic-dev git pkg-config libnss3-dev libnspr4-dev wget mysql-client libmysqlclient-dev libmysqlclient18 libdumbnet-dev -y > /dev/null
 echo "Got Barnyard2 dependencies.\n"
 
 cd /tmp
@@ -143,8 +143,6 @@ echo "Setting up oisf..."
 ./autogen.sh > /dev/null
 echo "Confguring..."
 ./configure --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr > /dev/null
-echo "Cleaning oisf..."
-make clean > /dev/null
 echo "Making..."
 make > /dev/null
 echo "Installing oisf..."
