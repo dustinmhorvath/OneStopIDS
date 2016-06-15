@@ -16,84 +16,85 @@ read -s SNORBYDBPASS
 
 DATE=$(date +"%Y%m%d%H%M")
 
-echo "Installing snorby package dependencies..."
+echo "Snorby dependencies (1/3) apt-get dependencies..."
 apt-get install wkhtmltopdf gcc g++ build-essential libssl-dev libreadline6-dev zlib1g-dev libsqlite3-dev libxslt-dev libxml2-dev imagemagick git-core libmysqlclient-dev libmagickwand-dev default-jre ruby ruby-dev -y > /dev/null
-echo "Done."
-echo "Installing MySQL server..."
+echo "Snorby dependencies (2/3) MySQL server..."
 debconf-set-selections <<< "mysql-server mysql-server/root_password password $MYSQLROOTPASSWD"
 debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $MYSQLROOTPASSWD"
 sudo apt-get -y install mysql-server > /dev/null
-echo "Done."
-
-echo "Installing snorby gem dependencies..."
+echo "Snorby dependencies (3/3) gem dependencies..."
 gem install thor i18n bundler tzinfo builder memcache-client rack rack-test erubis mail rack-mount rails sqlite3 > /dev/null
+echo "Done."
+echo ""
 
 echo "Installing Suricata..."
 apt-get install suricata -y > /dev/null
 echo "Done."
+echo ""
 
+echo "Snorby prepare (1/3) cloning..."
 if [ -d "/var/www/snorby" ]; then
   mv /var/www/snorby /var/www/snorby.BAK.$DATE
 fi
-git clone http://github.com/Snorby/snorby.git /var/www/snorby
-
-echo "Building configurations for Snorby..."
+git clone http://github.com/Snorby/snorby.git /var/www/snorby > /dev/null
+echo "Snorby prepare (2/3) building configurations..."
 cp /var/www/snorby/config/database.yml.example /var/www/snorby/config/database.yml
 cp /var/www/snorby/config/snorby_config.yml.example /var/www/snorby/config/snorby_config.yml
-
 sed -i "s/password: .*\$/password: $MYSQLROOTPASSWD/" /var/www/snorby/config/database.yml
 sed -i "s/domain: .*\$/domain: 'localhost:3000'/" /var/www/snorby/config/snorby_config.yml
 sed -i "s/wkhtmltopdf: .*\$/wkhtmltopdf: wkhtmltopdf/" /var/www/snorby/config/snorby_config.yml
-
+echo "Snorby prepare (3/3) suricata rules..."
 if grep -Fxq "/etc/suricata/rules/" /var/www/snorby/config/snorby_config.yml
 then
   echo "Rules already in snorby config."
 else
   sed -i "s#rules:#rules: \n    - \"/etc/suricata/rules/\"#g" /var/www/snorby/config/snorby_config.yml
 fi
-echo "Done."
-
+echo ""
 
 cd /var/www/snorby
-echo "Updating snorby configuration and getting dependencies..."
+echo "Snorby setup (1/6) updating snorby configuration and getting dependencies..."
 bundle update activesupport railties rails > /dev/null
-echo "Installing dependencies..."
+echo "Snorby setup (2/6) installing dependencies..."
 gem install arel ezprint > /dev/null
-echo "Bundle installing..."
+echo "Snorby setup (3/6) bundle installing..."
 bundle install > /dev/null
-echo "Setting up Snorby..."
+echo "Snorby setup (4/6) setting up Snorby..."
 bundle exec rake snorby:setup > /dev/null
 echo "Done."
+echo ""
 
-echo "Creating MySQL User for snorby..."
+echo "Snorby setup (5/6) creating MySQL User for snorby..."
 mysql -u root --password=$MYSQLROOTPASSWD -e "GRANT ALL PRIVILEGES ON snorby.* TO 'snorbyuser'@'localhost' IDENTIFIED BY '$SNORBYDBPASS' with grant option;"
 mysql -u root --password=$MYSQLROOTPASSWD -e "grant all privileges on snorby.* to 'snorbyuser'@'localhost' with grant option;"
 mysql -u root --password=$MYSQLROOTPASSWD -e "flush privileges;"
 
-echo "Correcting snorby database config with new user..."
+echo "Snorby setup (6/6) correcting snorby database config with new user..."
 sed -i "s/password: .*\$/password: $SNORBYDBPASS/" /var/www/snorby/config/database.yml
 sed -i "s/username: .*\$/username: snorbyuser/" /var/www/snorby/config/database.yml
 echo "Done."
+echo ""
 
 echo "Configuring MySQL listen..."
 sed -i 's/bind-address\s\+.*/bind-address = 0.0.0.0/g' /etc/mysql/my.cnf
 
 service mysql restart
 echo "Installing Apache2..."
-apt-get install apache2 apache2-dev libapr1-dev libaprutil1-dev libcurl4-openssl-dev > /dev/null
+apt-get install apache2 apache2-dev libapr1-dev libaprutil1-dev libcurl4-openssl-dev -y > /dev/null
 service apache2 start
 
-echo "Installing Passenger gem..."
+echo "Passenger (1/3) installing Passenger gem..."
 gem install --no-ri --no-rdoc passenger > /dev/null
-echo "Installing Passenger..."
+echo "Passenger (2/3) installing Passenger module..."
 /usr/local/bin/passenger-install-apache2-module -a &> /tmp/.passenger_compile_out
-echo "Done."
-
+echo "Passenger (3/3) creating Passenger module configuration..."
 sed -n '/LoadModule passenger_module \/var\//,/<\/IfModule>/p' /tmp/.passenger_compile_out > /etc/apache2/mods-available/passenger.load
 a2enmod passenger
 a2enmod rewrite
 a2enmod ssl
 rm /tmp/.passenger_compile_out
+echo "Done."
+echo ""
 
 chown www-data:www-data /var/www/snorby -R
 
@@ -141,7 +142,7 @@ cd oisf
 git clone https://github.com/OISF/libhtp.git > /dev/null
 echo "Setting up oisf..."
 ./autogen.sh > /dev/null
-echo "Confguring..."
+echo "Configuring..."
 ./configure --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr > /dev/null
 echo "Making..."
 make > /dev/null
@@ -168,12 +169,21 @@ echo "Installing daq..."
 make install > /dev/null
 
 echo "Gitting Barnyard2..."
+cd /tmp
+if [ -d "/tmp/barnyard2" ]; then
+  rm -r /tmp/barnyard2
+fi
 git clone https://github.com/firnsy/barnyard2 > /dev/null
 cd barnyard2
 echo "Setting up..."
 ./autogen.sh > /dev/null
 echo "Configuring Barnyard2..."
-./configure #NOTE: --with-mysql here? > /dev/null
+autoreconf --force --install
+./configure > /dev/null #NOTE: --with-mysql here? > /dev/null
+if [ -f /usr/include/dnet.h ];
+then
+   rm /usr/include/dnet.h
+fi
 ln -s /usr/include/dumbnet.h /usr/include/dnet.h
 echo "Compiling Barnyard2..."
 make > /dev/null
