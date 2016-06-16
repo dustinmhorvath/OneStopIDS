@@ -27,9 +27,21 @@ gem install thor i18n bundler tzinfo builder memcache-client rack rack-test erub
 echo "Done."
 echo ""
 
-echo "Installing Suricata..."
+echo "Installing Suricata (1/4) apt-getting..."
 apt-get install suricata -y > /dev/null
 cp /etc/suricata/suricata-debian.yaml /etc/suricata/suricata.yaml
+echo "Installing Suricata (2/4) configuring /etc/default/suricata..."
+sed -i "s#RUN=.*#RUN=yes#g" /etc/default/suricata
+sed -i "s#LISTENMODE=.*#LISTENMODE=af-packet#g" /etc/default/suricata
+sed -i "s#SURCONF=.*#SURCONF=/etc/suricata/suricata.yaml#g" /etc/default/suricata
+echo "Installing Suricata (3/4) configuring /etc/suricata/suricata.yaml..."
+#NOTE doesn't seem to run, but w/e, will deal with later
+sed -i "s|windows: [0.0.0.0/0].*|#windows: [0.0.0.0/0]|g" /etc/suricata/suricata.yaml
+echo "Installing Suricata (4/4) getting rules..."
+cd /etc/suricata/
+wget http://rules.emergingthreats.net/open/suricata/emerging.rules.tar.gz > /dev/null
+tar xzf emerging.rules.tar.gz
+rm emerging.rules.tar.gz
 echo "Done."
 echo ""
 
@@ -37,7 +49,7 @@ echo "Snorby prepare (1/3) cloning..."
 if [ -d "/var/www/snorby" ]; then
   mv /var/www/snorby /var/www/snorby.BAK.$DATE
 fi
-git clone http://github.com/Snorby/snorby.git /var/www/snorby > /dev/null
+git clone http://github.com/Snorby/snorby.git /var/www/snorby > /dev/null 2>&1
 echo "Snorby prepare (2/3) building configurations..."
 cp /var/www/snorby/config/database.yml.example /var/www/snorby/config/database.yml
 cp /var/www/snorby/config/snorby_config.yml.example /var/www/snorby/config/snorby_config.yml
@@ -78,7 +90,7 @@ echo ""
 echo "Configuring MySQL listen..."
 sed -i 's/bind-address\s\+.*/bind-address = 0.0.0.0/g' /etc/mysql/my.cnf
 service mysql restart
-
+echo ""
 
 echo "Installing Apache2 (1/5) apt-getting..."
 apt-get install apache2 apache2-dev libapr1-dev libaprutil1-dev libcurl4-openssl-dev -y > /dev/null
@@ -109,94 +121,95 @@ service apache2 restart
 echo "Done"
 echo ""
 
-
-echo "Passenger (1/3) installing Passenger gem..."
+echo "Passenger (1/4) installing Passenger gem..."
 gem install --no-ri --no-rdoc passenger > /dev/null
-echo "Passenger (2/3) installing Passenger module..."
+echo "Passenger (2/4) installing Passenger module..."
 /usr/local/bin/passenger-install-apache2-module -a &> /tmp/.passenger_compile_out
-echo "Passenger (3/3) creating Passenger module configuration..."
+echo "Passenger (3/4) creating Passenger module configuration..."
 sed -n '/LoadModule passenger_module \/var\//,/<\/IfModule>/p' /tmp/.passenger_compile_out > /etc/apache2/mods-available/passenger.load
-a2enmod passenger
-a2enmod rewrite
-a2enmod ssl
+a2enmod passenger > /dev/null
+a2enmod rewrite > /dev/null
+a2enmod ssl > /dev/null
 rm /tmp/.passenger_compile_out
-service apache2 restart
+echo "Passenger (4/4) restarting Apache..."
+service apache2 restart > /dev/null
 echo "Done."
 echo ""
 
 
 cd /var/www/snorby
-echo "Bundle packing snorby..."
+echo "Snorby install (1/2) bundle packing snorby..."
 bundle pack > /dev/null
-echo "Installing snorby..."
+echo "Snorby install (2/2) installing..."
 bundle install --path vender/cache > /dev/null
 echo "Done."
+echo ""
 
-echo "Installing Barnyard2 dependencies..."
+
+by2steps=19
+echo "Installing Barnyard2 (1/$by2steps) install apt dependencies..."
 apt-get install libpcre3 libpcre3-dbg libpcre3-dev build-essential autoconf automake libtool libpcap-dev libnet1-dev libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 make libmagic-dev git pkg-config libnss3-dev libnspr4-dev wget mysql-client libmysqlclient-dev libmysqlclient18 libdumbnet-dev -y > /dev/null
-echo "Got Barnyard2 dependencies."
 
 cd /tmp
-echo "Getting OISF source..."
+echo "Installing Barnyard2 (2/$by2steps) getting OISF source..."
 if [ -d "/tmp/oisf" ]; then
   rm -r /tmp/oisf
 fi
-git clone git://phalanx.openinfosecfoundation.org/oisf.git > /dev/null
+git clone git://phalanx.openinfosecfoundation.org/oisf.git > /dev/null 2>&1
 cd oisf
-git clone https://github.com/OISF/libhtp.git > /dev/null
-echo "Setting up oisf..."
-./autogen.sh > /dev/null
-echo "Configuring..."
+echo "Installing Barnyard2 (3/$by2steps) getting libhtp..."
+git clone https://github.com/OISF/libhtp.git > /dev/null 2>&1
+echo "Installing Barnyard2 (4/$by2steps) generating for oisf..."
+./autogen.sh > /dev/null 2>&1
+echo "Installing Barnyard2 (5/$by2steps) configuring oisf..."
 ./configure --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr > /dev/null
-echo "Making..."
+echo "Installing Barnyard2 (6/$by2steps) making oisf..."
 make > /dev/null
-echo "Installing oisf..."
+echo "Installing Barnyard2 (7/$by2steps) installing oisf..."
 make install-full > /dev/null
 ldconfig
-echo "OISF done.\n"
 
-echo "Installing DAQ dependencies..."
+echo "Installing Barnyard2 (8/$by2steps) installing DAQ dependencies..."
 apt-get install flex bison -y > /dev/null
 cd /tmp
-echo "Getting daq-2.0.6 source..."
+echo "Installing Barnyard2 (9/$by2steps) getting daq-2.0.6 source..."
 wget https://www.snort.org/downloads/snort/daq-2.0.6.tar.gz > /dev/null
 if [ -d "/tmp/daq-2.0.6" ]; then
   rm -r /tmp/daq-2.0.6
 fi
-tar xzf daq-2.0.6.tar.gz > /dev/null
+tar xzf daq-2.0.6.tar.gz
 cd daq-2.0.6
-echo "Configuring..."
-./configure > /dev/null
-echo "Compiling daq-206..."
-make > /dev/null
-echo "Installing daq..."
+echo "Installing Barnyard2 (10/$by2steps) configuring daq-2.0.6..."
+./configure > /dev/null 2>&1
+echo "Installing Barnyard2 (11/$by2steps) compiling daq-206..."
+make > /dev/null 2>&1
+echo "Installing Barnyard2 (12/$by2steps) installing daq..."
 make install > /dev/null
 
-echo "Gitting Barnyard2..."
+echo "Installing Barnyard2 (13/$by2steps) gitting Barnyard2..."
 cd /tmp
 if [ -d "/tmp/barnyard2" ]; then
   rm -r /tmp/barnyard2
 fi
-git clone https://github.com/firnsy/barnyard2 > /dev/null
+git clone https://github.com/firnsy/barnyard2 > /dev/null 2>&1
 cd barnyard2
-echo "Setting up..."
-./autogen.sh > /dev/null
-echo "Configuring Barnyard2..."
+echo "Installing Barnyard2 (14/$by2steps) generating for Barnyard2..."
+./autogen.sh > /dev/null 2>&1
+echo "Installing Barnyard2 (15/$by2steps) configuring Barnyard2..."
 autoreconf --force --install > /dev/null
 ./configure --with-mysql --with-mysql-libraries=/usr/lib/x86_64-linux-gnu/ > /dev/null
 if [ -f /usr/include/dnet.h ];
 then
    rm /usr/include/dnet.h
 fi
+echo "Installing Barnyard2 (16/$by2steps) linking limbumdnet..."
 ln -s /usr/include/dumbnet.h /usr/include/dnet.h
-echo "Compiling Barnyard2..."
-make > /dev/null
-echo "Installing Barnyard2..."
+echo "Installing Barnyard2 (17/$by2steps) compiling Barnyard2, suppressing warnings..."
+make > /dev/null 2>&1
+echo "Installing Barnyard2 (18/$by2steps) installing Barnyard2..."
 make install > /dev/null
 cp /tmp/barnyard2/etc/barnyard2.conf /etc/suricata/
-echo "Done."
-
-
+echo "Installing Barnyard2 (19/$by2steps) configuring /etc/suricata/barnyard2.conf..."
 sed -i "s/#config interface:\s\+eth0/config interface:  eth0/g" /etc/suricata/barnyard2.conf
 sed -i "s/#config daemon/config daemon/g" /etc/suricata/barnyard2.conf
 sed -i "s/#config verbose/config verbose/g" /etc/suricata/barnyard2.conf
@@ -216,18 +229,6 @@ fi
 if [ ! -d "/var/log/barnyard2" ]; then
   mkdir /var/log/barnyard2
 fi
-
-sed -i "s#RUN=.*#RUN=yes#g" /etc/default/suricata
-sed -i "s#LISTENMODE=.*#LISTENMODE=af-packet#g" /etc/default/suricata
-sed -i "s#SURCONF=.*#SURCONF=/etc/suricata/suricata.yaml#g" /etc/default/suricata
-
-#NOTE doesn't seem to run, but w/e, will deal with later
-sed -i "s|windows: [0.0.0.0/0].*|#windows: [0.0.0.0/0]|g" /etc/suricata/suricata.yaml
-
-cd /etc/suricata/
-wget http://rules.emergingthreats.net/open/suricata/emerging.rules.tar.gz > /dev/null
-tar xzf emerging.rules.tar.gz
-rm emerging.rules.tar.gz
 
 service suricata stop
 suricata -c /etc/suricata/suricata.yaml -i eth0 -D > /dev/null || echo "Error starting Suricata, probably already running. Continuing."
