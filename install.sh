@@ -51,6 +51,7 @@ then
 else
   sed -i "s#rules:#rules: \n    - \"/etc/suricata/rules/\"#g" /var/www/snorby/config/snorby_config.yml
 fi
+echo "Done."
 echo ""
 
 cd /var/www/snorby
@@ -62,12 +63,10 @@ echo "Snorby setup (3/6) bundle installing..."
 bundle install > /dev/null
 echo "Snorby setup (4/6) setting up Snorby..."
 bundle exec rake snorby:setup > /dev/null
-echo "Done."
-echo ""
 
 echo "Snorby setup (5/6) creating MySQL User for snorby..."
 mysql -u root --password=$MYSQLROOTPASSWD -e "GRANT ALL PRIVILEGES ON snorby.* TO 'snorbyuser'@'localhost' IDENTIFIED BY '$SNORBYDBPASS' with grant option;"
-mysql -u root --password=$MYSQLROOTPASSWD -e "grant all privileges on snorby.* to 'snorbyuser'@'localhost' with grant option;"
+#mysql -u root --password=$MYSQLROOTPASSWD -e "grant all privileges on snorby.* to 'snorbyuser'@'localhost' with grant option;"
 mysql -u root --password=$MYSQLROOTPASSWD -e "flush privileges;"
 
 echo "Snorby setup (6/6) correcting snorby database config with new user..."
@@ -121,6 +120,7 @@ a2enmod passenger
 a2enmod rewrite
 a2enmod ssl
 rm /tmp/.passenger_compile_out
+service apache2 restart
 echo "Done."
 echo ""
 
@@ -183,7 +183,7 @@ echo "Setting up..."
 ./autogen.sh > /dev/null
 echo "Configuring Barnyard2..."
 autoreconf --force --install > /dev/null
-./configure > /dev/null #NOTE: --with-mysql here? > /dev/null
+./configure --with-mysql --with-mysql-libraries=/usr/lib/x86_64-linux-gnu/ #NOTE: --with-mysql here? > /dev/null
 if [ -f /usr/include/dnet.h ];
 then
    rm /usr/include/dnet.h
@@ -196,10 +196,10 @@ make install > /dev/null
 cp /tmp/barnyard2/etc/barnyard2.conf /etc/suricata/
 echo "Done."
 
-sed -i "s#config reference_file:\s\+ /etc/.*#config reference_file:      /etc/suricata/reference.config#g" /etc/suricata/barnyard2.conf
-sed -i "s#config classification_file:\s\+ /etc/.*#config classification_file: /etc/suricata/classification.config#g" /etc/suricata/barnyard2.conf
-sed -i "s#config gen_file:\s\+ /etc/.*#config gen_file:            /etc/suricata/rules/gen-msg.map#g" /etc/suricata/barnyard2.conf
-sed -i "s#config sid_file:\s\+ /etc/.*#config sid_file:            /etc/suricata/rules/sid-msg.map#g" /etc/suricata/barnyard2.conf
+sed -i "s#config reference_file:\s\+/etc/.*#config reference_file:      /etc/suricata/reference.config#g" /etc/suricata/barnyard2.conf
+sed -i "s#config classification_file:\s\+/etc/.*#config classification_file: /etc/suricata/classification.config#g" /etc/suricata/barnyard2.conf
+sed -i "s#config gen_file:\s\+/etc/.*#config gen_file:            /etc/suricata/rules/gen-msg.map#g" /etc/suricata/barnyard2.conf
+sed -i "s#config sid_file:\s\+/etc/.*#config sid_file:            /etc/suricata/rules/sid-msg.map#g" /etc/suricata/barnyard2.conf
 
 if grep -Fxq "user=snorbyuser" /etc/suricata/barnyard2.conf
 then
@@ -226,10 +226,10 @@ rm emerging.rules.tar.gz
 
 service suricata stop
 suricata -c /etc/suricata/suricata.yaml -i eth0 -D > /dev/null || echo "Error starting Suricata, probably already running. Continuing."
-barnyard2 -c /etc/suricata/barnyard2.conf -d /var/log/suricata -f unified2.alert -w /var/log/suricata/suricata.waldo -D
+barnyard2 -c /etc/suricata/barnyard2.conf -d /var/log/suricata -f unified2.alert -w /var/log/suricata/suricata.waldo -D || true
 
 echo "Writing barnyard init.d..."
-cat <<EOT >> /etc/init.d/barnyard2
+cat << 'EOT' >> /etc/init.d/barnyard2
 #!/bin/sh
 case $1 in
     start)
