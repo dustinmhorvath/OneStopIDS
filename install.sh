@@ -74,7 +74,7 @@ gem install arel ezprint > /dev/null
 echo "Snorby setup (3/6) bundle installing..."
 bundle install > /dev/null
 echo "Snorby setup (4/6) setting up Snorby..."
-bundle exec rake snorby:setup > /dev/null
+bundle exec rake snorby:setup RAILS_ENV=production > /dev/null
 
 echo "Snorby setup (5/6) creating MySQL User for snorby..."
 mysql -u root --password=$MYSQLROOTPASSWD -e "GRANT ALL PRIVILEGES ON snorby.* TO 'snorbyuser'@'localhost' IDENTIFIED BY '$SNORBYDBPASS' with grant option;"
