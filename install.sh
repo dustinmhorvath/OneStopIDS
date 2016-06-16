@@ -183,7 +183,7 @@ echo "Setting up..."
 ./autogen.sh > /dev/null
 echo "Configuring Barnyard2..."
 autoreconf --force --install > /dev/null
-./configure --with-mysql --with-mysql-libraries=/usr/lib/x86_64-linux-gnu/ #NOTE: --with-mysql here? > /dev/null
+./configure --with-mysql --with-mysql-libraries=/usr/lib/x86_64-linux-gnu/ > /dev/null
 if [ -f /usr/include/dnet.h ];
 then
    rm /usr/include/dnet.h
@@ -196,6 +196,11 @@ make install > /dev/null
 cp /tmp/barnyard2/etc/barnyard2.conf /etc/suricata/
 echo "Done."
 
+
+sed -i "s/#config interface:\s\+eth0/config interface:  eth0/g" /etc/suricata/barnyard2.conf
+sed -i "s/#config daemon/config daemon/g" /etc/suricata/barnyard2.conf
+sed -i "s/#config verbose/config verbose/g" /etc/suricata/barnyard2.conf
+sed -i "s#config waldo_file:.*#config waldo_file: /var/log/suricata/waldo#g" /etc/suricata/barnyard2.conf
 sed -i "s#config reference_file:\s\+/etc/.*#config reference_file:      /etc/suricata/reference.config#g" /etc/suricata/barnyard2.conf
 sed -i "s#config classification_file:\s\+/etc/.*#config classification_file: /etc/suricata/classification.config#g" /etc/suricata/barnyard2.conf
 sed -i "s#config gen_file:\s\+/etc/.*#config gen_file:            /etc/suricata/rules/gen-msg.map#g" /etc/suricata/barnyard2.conf
