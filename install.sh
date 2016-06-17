@@ -114,8 +114,8 @@ cat <<EOT >> /etc/apache2/sites-available/snorby.conf
 </VirtualHost>
 EOT
 echo "Installing Apache2 (4/5) enabling site..."
-a2dissite 000-default.conf
-a2ensite snorby.conf
+a2dissite 000-default.conf > /dev/null 2>&1
+a2ensite snorby.conf > /dev/null 2>&1
 echo "Installing Apache2 (5/5) starting Apache..."
 service apache2 restart
 echo "Done"
@@ -124,7 +124,7 @@ echo ""
 echo "Passenger (1/4) installing Passenger gem..."
 gem install --no-ri --no-rdoc passenger > /dev/null
 echo "Passenger (2/4) installing Passenger module..."
-/usr/local/bin/passenger-install-apache2-module -a &> /tmp/.passenger_compile_out
+/usr/local/bin/passenger-install-apache2-module -a > /tmp/.passenger_compile_out
 echo "Passenger (3/4) creating Passenger module configuration..."
 sed -n '/LoadModule passenger_module \/var\//,/<\/IfModule>/p' /tmp/.passenger_compile_out > /etc/apache2/mods-available/passenger.load
 a2enmod passenger > /dev/null
@@ -261,3 +261,16 @@ EOT
 
 chmod 700 /etc/init.d/barnyard2
 update-rc.d barnyard2 defaults 21 00
+
+echo "Final Snorby Restart (1/2) hard reset..."
+cd /var/www/snorby
+bundle exec rake snorby:hard_reset RAILS_ENV=production > /dev/null
+echo "Final Snorby Restart (2/2) last setup..."
+bundle exec rake snorby:setup RAILS_ENV=production > /dev/null
+echo "Done."
+echo ""
+
+echo "---FINISHED---"
+echo ""
+
+exit 0;
