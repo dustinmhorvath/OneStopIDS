@@ -266,7 +266,7 @@ echo "Final Snorby config (1/2) soft reset..."
 cd /var/www/snorby
 bundle exec rake snorby:soft_reset RAILS_ENV=production > /dev/null
 echo "Final Snorby config (2/2) fixing start on boot..."
-sed -i 's#.*exit.*#cd /var/www/snorby && bundle exec rake snorby:update RAILS_ENV=production\n&#' /etc/rc.local
+sed -i 's#^exit.*#cd /var/www/snorby \&\& bundle exec rake snorby:update RAILS_ENV=production\n&#' /etc/rc.local
 echo "Done."
 echo ""
 
