@@ -39,7 +39,7 @@ echo "Installing Suricata (3/4) configuring /etc/suricata/suricata.yaml..."
 sed -i "s|windows: [0.0.0.0/0].*|#windows: [0.0.0.0/0]|g" /etc/suricata/suricata.yaml
 echo "Installing Suricata (4/4) getting rules..."
 cd /etc/suricata/
-wget http://rules.emergingthreats.net/open/suricata/emerging.rules.tar.gz > /dev/null
+wget http://rules.emergingthreats.net/open/suricata/emerging.rules.tar.gz > /dev/null 2>&1
 tar xzf emerging.rules.tar.gz
 rm emerging.rules.tar.gz
 echo "Done."
@@ -155,10 +155,10 @@ echo "Installing Barnyard2 (2/$by2steps) getting OISF source..."
 if [ -d "/tmp/oisf" ]; then
   rm -r /tmp/oisf
 fi
-git clone git://phalanx.openinfosecfoundation.org/oisf.git > /dev/null 2>&1
+git clone -q git://phalanx.openinfosecfoundation.org/oisf.git > /dev/null
 cd oisf
 echo "Installing Barnyard2 (3/$by2steps) getting libhtp..."
-git clone https://github.com/OISF/libhtp.git > /dev/null 2>&1
+git clone -q https://github.com/OISF/libhtp.git > /dev/null
 echo "Installing Barnyard2 (4/$by2steps) generating for oisf..."
 ./autogen.sh > /dev/null 2>&1
 echo "Installing Barnyard2 (5/$by2steps) configuring oisf..."
@@ -264,7 +264,7 @@ update-rc.d barnyard2 defaults 21 00
 
 echo "Final Snorby config (1/2) soft reset..."
 cd /var/www/snorby
-bundle exec rake snorby:soft_reset RAILS_ENV=production > /dev/null
+bundle exec rake snorby:update RAILS_ENV=production > /dev/null
 echo "Final Snorby config (2/2) fixing start on boot..."
 sed -i 's#^exit.*#cd /var/www/snorby \&\& bundle exec rake snorby:update RAILS_ENV=production\n&#' /etc/rc.local
 echo "Done."
