@@ -37,9 +37,10 @@ sed -i "s#SURCONF=.*#SURCONF=/etc/suricata/suricata.yaml#g" /etc/default/suricat
 echo "Installing Suricata (3/4) configuring /etc/suricata/suricata.yaml..."
 #NOTE doesn't seem to run, but w/e, will deal with later
 sed -i "s|windows: [0.0.0.0/0].*|#windows: [0.0.0.0/0]|g" /etc/suricata/suricata.yaml
+perl -0777 -i -pe  "s/- unified2-alert:\s*enabled:.*/- unified2-alert:\n      enabled: yes/g" /etc/suricata/suricata.yaml
 echo "Installing Suricata (4/4) getting rules..."
 cd /etc/suricata/
-wget http://rules.emergingthreats.net/open/suricata/emerging.rules.tar.gz > /dev/null 2>&1
+wget -q http://rules.emergingthreats.net/open/suricata/emerging.rules.tar.gz > /dev/null
 tar xzf emerging.rules.tar.gz
 rm emerging.rules.tar.gz
 echo "Done."
@@ -74,7 +75,11 @@ gem install arel ezprint > /dev/null
 echo "Snorby setup (3/6) bundle installing..."
 bundle install > /dev/null
 echo "Snorby setup (4/6) setting up Snorby..."
-bundle exec rake snorby:setup RAILS_ENV=production > /dev/null
+bundle exec rake snorby:setup RAILS_ENV=production > /dev/null || \
+( echo "Snorby setup failed due to error. Attempting patch for later versions of MySQL..." \
+&& sed -i 's/do_mysql (~> 0.10.6)/do_mysql (~> 0.10.17)/' /var/www/snorby/Gemfile.lock \
+&& sed -i 's/do_mysql (0.10.16)/do_mysql (0.10.17)/' /var/www/snorby/Gemfile.lock \
+&& bundle exec rake snorby:setup RAILS_ENV=production > /dev/null )
 
 echo "Snorby setup (5/6) creating MySQL User for snorby..."
 mysql -u root --password=$MYSQLROOTPASSWD -e "GRANT ALL PRIVILEGES ON snorby.* TO 'snorbyuser'@'localhost' IDENTIFIED BY '$SNORBYDBPASS' with grant option;"
@@ -124,12 +129,14 @@ echo ""
 echo "Passenger (1/4) installing Passenger gem..."
 gem install --no-ri --no-rdoc passenger > /dev/null
 echo "Passenger (2/4) installing Passenger module..."
-/usr/local/bin/passenger-install-apache2-module -a > /tmp/.passenger_compile_out
+/usr/local/bin/passenger-install-apache2-module -a 2> /tmp/.passenger_error.txt 1> /tmp/.passenger_compile_out \
+|| ( echo "Encountered error installing Passenger:" && cat /tmp/.passenger_error.txt )
 echo "Passenger (3/4) creating Passenger module configuration..."
 sed -n '/LoadModule passenger_module \/var\//,/<\/IfModule>/p' /tmp/.passenger_compile_out > /etc/apache2/mods-available/passenger.load
 a2enmod passenger > /dev/null
 a2enmod rewrite > /dev/null
 a2enmod ssl > /dev/null
+rm /tmp/.passenger_error.txt
 rm /tmp/.passenger_compile_out
 echo "Passenger (4/4) restarting Apache..."
 service apache2 restart > /dev/null
@@ -148,7 +155,8 @@ echo ""
 
 by2steps=19
 echo "Installing Barnyard2 (1/$by2steps) install apt dependencies..."
-apt-get install libpcre3 libpcre3-dbg libpcre3-dev build-essential autoconf automake libtool libpcap-dev libnet1-dev libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 make libmagic-dev git pkg-config libnss3-dev libnspr4-dev wget mysql-client libmysqlclient-dev libmysqlclient18 libdumbnet-dev -y > /dev/null
+apt-get install libpcre3 libpcre3-dbg libpcre3-dev build-essential autoconf automake libtool libpcap-dev libnet1-dev libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 make libmagic-dev git pkg-config libnss3-dev libnspr4-dev wget mysql-client libmysqlclient-dev libdumbnet-dev -y > /dev/null
+apt-get install libmysqlclient20 -y > /dev/null || apt-get install libmysqlclient18 -y > /dev/null
 
 cd /tmp
 echo "Installing Barnyard2 (2/$by2steps) getting OISF source..."
@@ -173,7 +181,7 @@ echo "Installing Barnyard2 (8/$by2steps) installing DAQ dependencies..."
 apt-get install flex bison -y > /dev/null
 cd /tmp
 echo "Installing Barnyard2 (9/$by2steps) getting daq-2.0.6 source..."
-wget https://www.snort.org/downloads/snort/daq-2.0.6.tar.gz > /dev/null
+wget -q https://www.snort.org/downloads/snort/daq-2.0.6.tar.gz > /dev/null
 if [ -d "/tmp/daq-2.0.6" ]; then
   rm -r /tmp/daq-2.0.6
 fi
