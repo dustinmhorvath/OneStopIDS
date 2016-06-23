@@ -79,6 +79,7 @@ bundle exec rake snorby:setup RAILS_ENV=production > /dev/null || \
 ( echo "Snorby setup failed due to error. Attempting patch for later versions of MySQL..." \
 && sed -i 's/do_mysql (~> 0.10.6)/do_mysql (~> 0.10.17)/' /var/www/snorby/Gemfile.lock \
 && sed -i 's/do_mysql (0.10.16)/do_mysql (0.10.17)/' /var/www/snorby/Gemfile.lock \
+&& bundle install > /dev/null \
 && bundle exec rake snorby:setup RAILS_ENV=production > /dev/null )
 
 echo "Snorby setup (5/6) creating MySQL User for snorby..."
