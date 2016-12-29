@@ -2,6 +2,8 @@
 
 set -e
 
+INTERFACE="eth1"
+
 # You need to be root, sorry.
 if [[ $EUID -ne 0 ]]; then
 	echo "This script requires elevated privileges to run. Are you root?"
@@ -16,13 +18,25 @@ read -s SNORBYDBPASS
 
 DATE=$(date +"%Y%m%d%H%M")
 
+echo "Build rails (1/4) wgetting..."
+wget https://cache.ruby-lang.org/pub/ruby/2.2/ruby-2.2.6.tar.gz > /dev/null
+echo "Build rails (1/4) extracting..."
+tar xzf ruby-2.2.6.tar.gz > /dev/null
+cd ruby-2.2.6
+echo "Build rails (1/4) configuring..."
+./configure > /dev/null
+echo "Build rails (1/4) make and install..."
+make > /dev/null
+make install-conf > /dev/null
+
 echo "Snorby dependencies (1/3) apt-get dependencies..."
-apt-get install wkhtmltopdf gcc g++ build-essential libssl-dev libreadline6-dev zlib1g-dev libsqlite3-dev libxslt-dev libxml2-dev imagemagick git-core libmysqlclient-dev libmagickwand-dev default-jre ruby ruby-dev -y > /dev/null
+apt-get install wkhtmltopdf gcc g++ build-essential libssl-dev libreadline6-dev zlib1g-dev libsqlite3-dev libxslt-dev libxml2-dev imagemagick git-core libmysqlclient-dev libmagickwand-dev default-jre postgresql-server-dev-9.4 -y > /dev/null
 echo "Snorby dependencies (2/3) MySQL server..."
 debconf-set-selections <<< "mysql-server mysql-server/root_password password $MYSQLROOTPASSWD"
 debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $MYSQLROOTPASSWD"
 sudo apt-get -y install mysql-server > /dev/null
 echo "Snorby dependencies (3/3) gem dependencies..."
+
 gem install thor i18n bundler tzinfo builder memcache-client rack rack-test erubis mail rack-mount rails sqlite3 > /dev/null
 echo "Done."
 echo ""
@@ -67,9 +81,8 @@ fi
 echo "Done."
 echo ""
 
-cd /var/www/snorby
 echo "Snorby setup (1/6) updating snorby configuration and getting dependencies..."
-bundle update activesupport railties rails > /dev/null
+cd /var/www/snorby && bundle update activesupport railties rails > /dev/null
 echo "Snorby setup (2/6) installing dependencies..."
 gem install arel ezprint > /dev/null
 echo "Snorby setup (3/6) bundle installing..."
@@ -219,7 +232,7 @@ echo "Installing Barnyard2 (18/$by2steps) installing Barnyard2..."
 make install > /dev/null
 cp /tmp/barnyard2/etc/barnyard2.conf /etc/suricata/
 echo "Installing Barnyard2 (19/$by2steps) configuring /etc/suricata/barnyard2.conf..."
-sed -i "s/#config interface:\s\+eth0/config interface:  eth0/g" /etc/suricata/barnyard2.conf
+sed -i "s/#config interface:\s\+$INTERFACE/config interface:  $INTERFACE/g" /etc/suricata/barnyard2.conf
 sed -i "s/#config daemon/config daemon/g" /etc/suricata/barnyard2.conf
 sed -i "s/#config verbose/config verbose/g" /etc/suricata/barnyard2.conf
 sed -i "s;#config waldo_file:.*;config waldo_file: /var/log/suricata/suricata.waldo;" /etc/suricata/barnyard2.conf
@@ -240,7 +253,7 @@ if [ ! -d "/var/log/barnyard2" ]; then
 fi
 
 service suricata stop
-suricata -c /etc/suricata/suricata.yaml -i eth0 -D > /dev/null || echo "Error starting Suricata, probably already running. Continuing."
+suricata -c /etc/suricata/suricata.yaml -i $INTERFACE -D > /dev/null || echo "Error starting Suricata, probably already running. Continuing."
 barnyard2 -c /etc/suricata/barnyard2.conf -d /var/log/suricata -f unified2.alert -w /var/log/suricata/suricata.waldo -D || true
 
 echo "Writing barnyard init.d..."
