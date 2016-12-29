@@ -29,9 +29,12 @@ DATE=$(date +"%Y%m%d%H%M")
 #make > /dev/null
 #make install-conf > /dev/null
 
+apt-get install curl > /dev/null
+
 gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
 curl -L https://get.rvm.io | bash -s stable --ruby
 source /usr/local/rvm/scripts/rvm
+echo "source /usr/local/rvm/scripts/rvm" >> /root/.bashrc
 
 echo "Snorby dependencies (1/3) apt-get dependencies..."
 apt-get install wkhtmltopdf gcc g++ build-essential libssl-dev libreadline6-dev zlib1g-dev libsqlite3-dev libxslt-dev libxml2-dev imagemagick git-core libmysqlclient-dev libmagickwand-dev default-jre postgresql-server-dev-9.4 -y > /dev/null
