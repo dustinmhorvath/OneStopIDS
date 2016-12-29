@@ -18,16 +18,20 @@ read -s SNORBYDBPASS
 
 DATE=$(date +"%Y%m%d%H%M")
 
-echo "Build rails (1/4) wgetting..."
-wget https://cache.ruby-lang.org/pub/ruby/2.2/ruby-2.2.6.tar.gz > /dev/null
-echo "Build rails (1/4) extracting..."
-tar xzf ruby-2.2.6.tar.gz > /dev/null
-cd ruby-2.2.6
-echo "Build rails (1/4) configuring..."
-./configure > /dev/null
-echo "Build rails (1/4) make and install..."
-make > /dev/null
-make install-conf > /dev/null
+#echo "Build rails (1/4) wgetting..."
+#wget https://cache.ruby-lang.org/pub/ruby/2.2/ruby-2.2.6.tar.gz > /dev/null
+#echo "Build rails (2/4) extracting..."
+#tar xzf ruby-2.2.6.tar.gz > /dev/null
+#echo "Build rails (3/4) configuring..."
+#cd ruby-2.2.6
+#./configure > /dev/null
+#echo "Build rails (4/4) make and install..."
+#make > /dev/null
+#make install-conf > /dev/null
+
+gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
+curl -L https://get.rvm.io | bash -s stable --ruby
+source /usr/local/rvm/scripts/rvm
 
 echo "Snorby dependencies (1/3) apt-get dependencies..."
 apt-get install wkhtmltopdf gcc g++ build-essential libssl-dev libreadline6-dev zlib1g-dev libsqlite3-dev libxslt-dev libxml2-dev imagemagick git-core libmysqlclient-dev libmagickwand-dev default-jre postgresql-server-dev-9.4 -y > /dev/null
@@ -170,7 +174,7 @@ echo ""
 by2steps=19
 echo "Installing Barnyard2 (1/$by2steps) install apt dependencies..."
 apt-get install libpcre3 libpcre3-dbg libpcre3-dev build-essential autoconf automake libtool libpcap-dev libnet1-dev libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 make libmagic-dev git pkg-config libnss3-dev libnspr4-dev wget mysql-client libmysqlclient-dev libdumbnet-dev -y > /dev/null
-apt-get install libmysqlclient20 -y > /dev/null || apt-get install libmysqlclient18 -y > /dev/null
+apt-get install libmysqlclient20 -y > /dev/null || (echo "Switching to 18..." && apt-get install libmysqlclient18 -y > /dev/null)
 
 cd /tmp
 echo "Installing Barnyard2 (2/$by2steps) getting OISF source..."
