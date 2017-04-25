@@ -2,7 +2,7 @@
 
 set -e
 
-INTERFACE="eth1"
+INTERFACE="eth0"
 
 # You need to be root, sorry.
 if [[ $EUID -ne 0 ]]; then
@@ -33,9 +33,9 @@ sudo apt-get install curl -y > /dev/null
 
 gpg --keyserver hkp://pgp.mit.edu --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
 curl -L https://get.rvm.io | bash
-rvm install 2.2.3
 source /usr/local/rvm/scripts/rvm
 echo "source /usr/local/rvm/scripts/rvm" >> /root/.bashrc
+rvm install 2.2.3
 
 echo "Snorby dependencies (1/3) apt-get dependencies..."
 apt-get install wkhtmltopdf gcc g++ build-essential libssl-dev libreadline6-dev zlib1g-dev libsqlite3-dev libxslt-dev libxml2-dev imagemagick git-core libmysqlclient-dev libmagickwand-dev default-jre postgresql-server-dev-9.4 -y > /dev/null
@@ -151,15 +151,20 @@ echo ""
 echo "Passenger (1/4) installing Passenger gem..."
 gem install --no-ri --no-rdoc passenger > /dev/null
 echo "Passenger (2/4) installing Passenger module..."
-/usr/local/bin/passenger-install-apache2-module -a 2> /tmp/.passenger_error.txt 1> /tmp/.passenger_compile_out \
-|| ( echo "Encountered error installing Passenger:" && cat /tmp/.passenger_error.txt )
+#/usr/local/bin/passenger-install-apache2-module -a 2> /tmp/.passenger_error.txt 1> /tmp/.passenger_compile_out \
+#|| ( echo "Encountered error installing Passenger:" && cat /tmp/.passenger_error.txt )
+#sed -n '/LoadModule passenger_module \/var\//,/<\/IfModule>/p' /tmp/.passenger_compile_out > /etc/apache2/mods-available/passenger.load
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
+apt-get install -y apt-transport-https ca-certificates
+#TODO: check that repo doesn't exist
+#sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger trusty main > /etc/apt/sources.list.d/passenger.list'
+apt-get update > /dev/null
+sudo apt-get install -y libapache2-mod-passenger
+
 echo "Passenger (3/4) creating Passenger module configuration..."
-sed -n '/LoadModule passenger_module \/var\//,/<\/IfModule>/p' /tmp/.passenger_compile_out > /etc/apache2/mods-available/passenger.load
 a2enmod passenger > /dev/null
 a2enmod rewrite > /dev/null
 a2enmod ssl > /dev/null
-rm /tmp/.passenger_error.txt
-rm /tmp/.passenger_compile_out
 echo "Passenger (4/4) restarting Apache..."
 service apache2 restart > /dev/null
 echo "Done."
