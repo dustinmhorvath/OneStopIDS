@@ -157,7 +157,7 @@ echo "Passenger (2/4) installing Passenger module..."
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
 apt-get install -y apt-transport-https ca-certificates
 #TODO: check that repo doesn't exist
-#sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger trusty main > /etc/apt/sources.list.d/passenger.list'
+sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger trusty main > /etc/apt/sources.list.d/passenger.list'
 apt-get update > /dev/null
 sudo apt-get install -y libapache2-mod-passenger
 
